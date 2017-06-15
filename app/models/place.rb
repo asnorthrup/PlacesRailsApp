@@ -65,4 +65,28 @@ def self.to_places(value)
 	return results
 end
 
+#class method returns instance of Place for supplied id
+def self.find s_id
+	bson_id=BSON::ObjectId.from_string(s_id)
+	found = self.collection.find(:_id=>bson_id)
+	return found.nil? ? nil : Place.new(found.first)
+end
+
+#return all records given an offset and limit
+def self.all (offset=nil, limit=nil)
+	ret = self.collection.find() if (offset.nil? && limit.nil?)
+	ret = self.collection.find().skip(offset) if (!offset.nil? && limit.nil?)
+	ret = self.collection.find().limit(limit) if (offset.nil? && !limit.nil?)
+	ret = self.collection.find().skip(offset).limit(limit) if (!offset.nil? && !limit.nil?)
+
+	#create new Place out of each
+	places=[]
+    ret.each do |doc|
+      places << Place.new(doc)
+    end
+    return places
+ 
+end 
+
+
 end
