@@ -68,8 +68,8 @@ end
 #class method returns instance of Place for supplied id
 def self.find s_id
 	bson_id=BSON::ObjectId.from_string(s_id)
-	found = self.collection.find(:_id=>bson_id)
-	return found.nil? ? nil : Place.new(found.first)
+	found = self.collection.find(:_id=>bson_id).first
+	return found.nil? ? nil : Place.new(found)
 end
 
 #return all records given an offset and limit
@@ -85,8 +85,88 @@ def self.all (offset=nil, limit=nil)
       places << Place.new(doc)
     end
     return places
- 
 end 
 
+# remove the document associated with this instance form the DB
+def destroy
+	#Rails.logger.debug {"destroying #{self}"}
+	#byebug
+	bson_id=BSON::ObjectId.from_string(@id)
+	self.class.collection.find(:_id=>bson_id).delete_one
+end 
+
+#************Aggregation Query methods start here**********
+
+#retuns collection of hash documents with address_components and their associated
+def self.get_address_components(sort={:_id=>1}, offset=0, limit=nil)
+	if limit.nil?
+	result = self.collection.find.aggregate([
+									{:$unwind=>"$address_components"},
+									{:$project=>{:address_components=>1,:formatted_address=>1, "geometry.geolocation"=>1}},
+									{:$sort=>sort},
+									{:$skip=>offset}
+									])
+	else #because if limit is nil, can't keep in query
+	result = self.collection.find.aggregate([
+									{:$unwind=>"$address_components"},
+									{:$project=>{:address_components=>1,:formatted_address=>1, "geometry.geolocation"=>1}},
+									{:$sort=>sort},
+									{:$skip=>offset},
+									{:$limit=>limit}
+									])
+	end
+	return result
+end
+
+
+#class method that returns a disctinct collection of country names (long_names_
+def self.get_country_names
+	#byebug
+	result=self.collection.find.aggregate([
+									{:$project=>{"address_components.long_name"=>1,"address_components.types"=>1, :_id=>0}},
+									{:$unwind=>"$address_components"},
+									{:$match=>{"address_components.types"=>"country"}},
+									{:$group=>{:_id=>"$address_components.long_name"}}
+										])
+	#byebug
+	result.to_a.map{|h| h[:_id]}
+
+end
+
+
+#return id of each document that the palces collection that has address_component.short_name of type country
+#and matches provided parameter
+def self.find_ids_by_country_code country_code
+	#have i dont the part about tagged with a country type?
+	self.collection.find.aggregate([
+									{:$match=>{"address_components.short_name":country_code}},
+									{:$project=>{:id=>1}},
+									]).map { |doc| doc[:_id].to_s }
+
+end
+
+#create 2dsphere index for geospatial analysis
+def self.create_indexes
+	self.collection.indexes.create_one({"geometry.geolocation"=>"2dsphere"})
+end
+
+#remove 2dsphere index, in rails c, Place.collection.indexes.map {|r| r[:name]}
+def self.remove_indexes
+	self.collection.indexes.drop_one("geometry.geolocation_2dsphere")
+end
+
+#returns the places that are closest to the provided point
+def self.near(point, max_meters=nil)
+if !max_meters.nil?
+	self.collection.find(
+		"geometry.geolocation"=>{:$near=>{:$geometry=>point.to_hash, :$maxDistance=>max_meters}}
+	)
+else
+	self.collection.find(
+		"geometry.geolocation"=>{:$near=>{:$geometry=>point.to_hash}}
+	)
+end
+
+end
 
 end
