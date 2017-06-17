@@ -45,10 +45,16 @@ def save
 		description[:metadata][:location]=@location.to_hash
 		#store the content type of image/jpeg to GridFS contentType
 		description[:content_type]="image/jpeg"
+
+		#call rewind between EXIFR and GridFS since they will be reading the same file
+		@contents.rewind
+
 		#store the data contents in GridFS, @contents should have file
 		if @contents
 			Rails.logger.debug {"contents= #{@contents}"}
 			grid_file = Mongo::Grid::File.new(@contents.read, description )
+			#call rewind between EXIFR and GridFS since they will be reading the same file
+			@contents.rewind
 			id=self.class.mongo_client.database.fs.insert_one(grid_file)
 			@id=id.to_s
 			#Rails.logger.debug {"saved gridfs file #{id}"}
@@ -82,7 +88,29 @@ def self.find(id)
 	#end
 	return ph.nil? ? nil : Photo.new(ph)
 end
+  #once we click insert, to show it was successfully updated, it goes and finds one
+  # which was id that was just assigned and return the data to the browser. Uses find one to
+  # find file object matching criteria
+def contents
+	Rails.logger.debug {"getting gridfs content #{@id}"}
+    f=self.class.mongo_client.database.fs.find_one(:_id=>BSON::ObjectId.from_string(@id))
+    # read f into buffer, array of chunks is reduced to single buffer and returned to caller.
+    # this is how file is broken apart and put together and assembled. Buffer is sent back to browser
+    # to disaply on the screen
+    if f 
+      buffer = ""
+      f.chunks.reduce([]) do |x,chunk| 
+          buffer << chunk.data.data 
+      end
+      return buffer
+    end 
+
+end
 
 
+def destroy
+	Rails.logger.debug {"destroying gridfs file #{@id}"}
+	self.class.mongo_client.database.fs.find(:_id=>BSON::ObjectId.from_string(@id)).delete_one
+end
 
 end
