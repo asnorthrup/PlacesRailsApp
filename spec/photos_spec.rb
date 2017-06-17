@@ -78,6 +78,7 @@ feature "Module #2 Photo Tests" do
       photo = Photo.new(hash)
       expect(photo).to_not be_nil
       expect(photo.id).to eq hash[:_id].to_s
+      #byebug
       tl = Point.new(hash[:metadata][:location])
       expect(photo.location.latitude).to eq tl.latitude
       expect(photo.location.longitude).to eq tl.longitude
@@ -114,6 +115,7 @@ feature "Module #2 Photo Tests" do
       id=@photo.save
       expect(id).to_not be_nil
       expect(@photo.persisted?).to be true
+
       expect(@photo.location.latitude).to eq test.latitude
       expect(@photo.location.longitude).to eq test.longitude
       metaData = Photo.mongo_client.database.fs.find(:_id=>BSON::ObjectId.from_string(@photo.id)).first
@@ -207,9 +209,12 @@ feature "Module #2 Photo Tests" do
     it "find returns expected type and result" do
       raw_result = Photo.mongo_client.database.fs.find.to_a.sample
       id = raw_result[:_id]
+      #byebug
       test_result = Photo.find(id.to_s)
+      #byebug
       expect(test_result).to_not be_nil
       expect(test_result).to be_a Photo
+      #byebug
       expect(test_result.location.latitude).to eq raw_result[:metadata][:location][:coordinates][1]
       expect(test_result.location.longitude).to eq raw_result[:metadata][:location][:coordinates][0]
     end 

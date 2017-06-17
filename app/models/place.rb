@@ -17,11 +17,17 @@ def initialize(params={})
 	@id=params[:_id].to_s
 	@formatted_address=params[:formatted_address]
 	#locations are point classes, create from hash passed in
-	@location=Point.new(params[:geometry])
+	#byebug
+	if !params[:geometry].key?(:geolocation)
+		@location=Point.new(params[:geometry])
+	else #created if because tes was pasing in :geometry:geolocation
+		@location=Point.new(params[:geometry][:geolocation])
+	end	
+	
 	@address_components=[]
+	#byebug
 	#address component is an array of hashes that should be created into AddressComponents
-	params[:address_components].each {|r| @address_components.push(AddressComponent.new(r))}
-	#o=nil
+	params[:address_components].each {|r| @address_components.push(AddressComponent.new(r))} if params[:address_components]
 end
 
 # class method that returns a Mongo DB client from Mongoid referencing
@@ -56,6 +62,7 @@ end
 #pass in Mongo::Collection::View and create new place out of each, return collection
 def self.to_places(value)
 	results=[]
+	#byebug
 	#iterate over view passed in
 	value.each do |v|
 		p=Place.new(v)
@@ -157,16 +164,33 @@ end
 
 #returns the places that are closest to the provided point
 def self.near(point, max_meters=nil)
-if !max_meters.nil?
-	self.collection.find(
-		"geometry.geolocation"=>{:$near=>{:$geometry=>point.to_hash, :$maxDistance=>max_meters}}
-	)
-else
-	self.collection.find(
-		"geometry.geolocation"=>{:$near=>{:$geometry=>point.to_hash}}
-	)
+	if !max_meters.nil?
+		self.collection.find(
+			"geometry.geolocation"=>{:$near=>{:$geometry=>point.to_hash, :$maxDistance=>max_meters}}
+		)
+	else
+		self.collection.find(
+			"geometry.geolocation"=>{:$near=>{:$geometry=>point.to_hash}}
+		)
+	end
 end
 
+
+#instance method that wraps the class method of the same name
+def near(max_meters=nil)
+	#byebug
+	if !max_meters.nil?
+		result=self.class.collection.find(
+			"geometry.geolocation"=>{:$near=>{:$geometry=>@location.to_hash, :$maxDistance=>max_meters}}
+		)
+	else
+		result=self.class.collection.find(
+			"geometry.geolocation"=>{:$near=>{:$geometry=>@location.to_hash}}
+		)
+	end
+	#byebug
+	return self.class.to_places(result) if result
 end
+
 
 end

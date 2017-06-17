@@ -112,6 +112,7 @@ feature "Module #2 Geolocation Tests" do
         p1 = Place.new(:_id=>BSON::ObjectId('56c0f75ae301d066a2009999'), 
                        :formatted_address=>"JHU, Baltimore, MD", 
                        :geometry=>{:geolocation=>ref_point})
+        #byebug
         list_near = p1.near(ref_distance)
         expect(list_near).to be_a Array
         expect(ref_list.count).to eq list_near.count
