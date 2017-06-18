@@ -61,6 +61,11 @@ def save
 			#store the generated _id for the file in the :id property of the Photo model instance
 			@id
 		end
+	else
+		b_id=BSON::ObjectId.from_string(@id)
+		loc_hash=@location.to_hash
+		self.class.mongo_client.database.fs.find(:_id=>b_id)
+										.update_one({'$set'=>{"metadata.location"=>loc_hash}})
 	end
 end
 
