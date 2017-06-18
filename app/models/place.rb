@@ -162,7 +162,7 @@ def self.remove_indexes
 	self.collection.indexes.drop_one("geometry.geolocation_2dsphere")
 end
 
-#returns the places that are closest to the provided point
+#returns the places that are closest to the provided point, returns a view of places
 def self.near(point, max_meters=nil)
 	if !max_meters.nil?
 		self.collection.find(

@@ -60,6 +60,7 @@ feature "Module #2 Relationship Tests" do
       sample_photo_loc = sample_photo.location
       bf_place = nil
       c_distance = 99999999.0
+
       Place.all.each { |p|
         d = Geo_utils.PointDistance(sample_photo_loc, p.location)
         if (d < max_d && d < c_distance) then
@@ -68,7 +69,9 @@ feature "Module #2 Relationship Tests" do
         end
       }
       # result will either be nil (no nearest within distance) or a single id
+      #byebug
       result = sample_photo.find_nearest_place_id(max_d)
+
       expect(result.nil? || result.is_a?(BSON::ObjectId)).to be true
       expect(result.nil? || result.to_s == bf_place.id).to be true
     end    

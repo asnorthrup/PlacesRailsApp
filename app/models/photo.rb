@@ -113,4 +113,16 @@ def destroy
 	self.class.mongo_client.database.fs.find(:_id=>BSON::ObjectId.from_string(@id)).delete_one
 end
 
+#photo herlper instance method that returns the _id of the document within the places collection. This
+#place document must be within a specified distance threshold of where the photo was taken.
+def find_nearest_place_id max_dist
+	#byebug
+	phot=self.class.find(@id)
+	phot=phot.location
+	phot=Place.near(phot,max_dist).projection(:_id=>1).first
+	return phot[:_id]
+end
+
+
+
 end
