@@ -192,5 +192,15 @@ def near(max_meters=nil)
 	return self.class.to_places(result) if result
 end
 
+#return a collection of photos that have been associated with the place
+def photos(offset=0, limit=nil)
+	if limit
+		q=Photo.find_photos_for_place(@id).skip(offset).limit(limit)
+		q.map {|doc| Photo.new(doc)}
+	else
+		q=Photo.find_photos_for_place(@id).skip(offset)
+		q.map {|doc| Photo.new(doc)}
+	end
+end
 
 end

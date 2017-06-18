@@ -18,10 +18,12 @@ def initialize(params={})
 	if params[:_id]  #hash came from GridFS, has _id
 		@id=params[:_id].to_s 
 		@location=params[:metadata].nil? ? nil : Point.new(params[:metadata][:location])
+		@place=params[:metadata].nil? ? nil : params[:metadata][:place]
 	else              #assume hash came from Rails
      	@id=params[:id] #if hash didn't come from GridFS, use that otherwise just take what was given from rails scallfold
      	@location=params[:metadata].nil? ? nil : Point.new(params[:metadata][:location])
-    end
+     	@place=params[:metadata].nil? ? nil : params[:metadata][:place]
+	end
 
 
 end
@@ -45,6 +47,8 @@ def save
 		description[:metadata][:location]=@location.to_hash
 		#store the content type of image/jpeg to GridFS contentType
 		description[:content_type]="image/jpeg"
+		#save the place information to record
+		description[:metadata][:place]=@place
 
 		#call rewind between EXIFR and GridFS since they will be reading the same file
 		@contents.rewind
@@ -63,13 +67,20 @@ def save
 		end
 	else
 		b_id=BSON::ObjectId.from_string(@id)
+		#updated saved location
 		loc_hash=@location.to_hash
 		self.class.mongo_client.database.fs.find(:_id=>b_id)
-										.update_one({'$set'=>{"metadata.location"=>loc_hash}})
+										.update_one('$set'=>{"metadata.location"=>loc_hash})
+		#byebug
+		#update saved place
+		self.class.mongo_client.database.fs.find(:_id=>b_id)
+										.update_one('$set'=>{"metadata.place"=>@place})
+		#byebug
 	end
 end
 
 def self.all(offset=0,limit=nil)
+	#byebug
     files=[]
     if limit
     	mongo_client.database.fs.find.skip(offset).limit(limit).each do |r| 
@@ -83,7 +94,9 @@ def self.all(offset=0,limit=nil)
     return files
 end
 
+#given id number of photo, finds it in collection
 def self.find(id)
+	#byebug
 	id=BSON::ObjectId.from_string(id)
 	ph=mongo_client.database.fs.find(:_id=>id).first
 	#byebug
@@ -128,6 +141,30 @@ def find_nearest_place_id max_dist
 	return phot[:_id]
 end
 
+#custom getter that finds and returns place instance that represents the stored id
+def place
+	@place.nil? ? nil : Place.find(@place.to_s)
+	
+end
 
+#custom setter that will update the place ID by accepting a BSON::ObjectId, String or Place instance
+def place=(set_place)
+	#derive BSON::ObjectId from what is passed in for all 3 cases
+	if set_place.is_a?(Place)
+		@place=BSON::ObjectId.from_string(set_place.id)
+	elsif set_place.is_a?(String)
+		@place=BSON::ObjectId.from_string(set_place)
+	else #should already be BSON::ObjectId
+		@place=set_place
+	end
+end
+
+#class method that accepts BSON objectid or a string of a place and returns a 
+#collection view of photo documents that have the foreign key reference.
+def self.find_photos_for_place place_id
+	#byebug
+	place_id=BSON::ObjectId.from_string(place_id) if place_id.is_a?(String)
+	mongo_client.database.fs.find('metadata.place'=>place_id)
+end
 
 end

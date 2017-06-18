@@ -11,8 +11,8 @@ def initialize (params={})
 	#byebug
 	#deep symbolize! wasn't working in place (destructively)
 	#byebug
-	params=params.symbolize_keys
-	params=params.deep_symbolize_keys
+	params=params.symbolize_keys if !params.nil?
+	params=params.deep_symbolize_keys if !params.nil?
 	if params.key?(:type)
 		@longitude = params[:coordinates][0]
 		@latitude = params[:coordinates][1]

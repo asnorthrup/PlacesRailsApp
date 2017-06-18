@@ -121,10 +121,12 @@ feature "Module #2 Relationship Tests" do
     end  
 
     it "There exists a many to one relationship between Place and Photo" do
+
       photo = Photo.all.sample
       photo_id = photo.id
       expect(photo.place).to be_nil
       place_id = photo.find_nearest_place_id(100*1069.34)
+      
       photo.place = place_id
       photo.save
 
@@ -167,6 +169,7 @@ feature "Module #2 Relationship Tests" do
       p_list = []
       Photo.all.each { |photo| 
         if alternate then
+          #byebug
           photo.place = place
           photo.save
           p_list.push(photo.id)
@@ -219,6 +222,7 @@ feature "Module #2 Relationship Tests" do
       }
       # Now test method, it should return 3 of the six photos
       result = place.photos
+      #byebug
       expect(result).to be_a Array
       expect(result.count).to eq p_list.count
       result.each { |r|
