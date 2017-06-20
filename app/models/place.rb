@@ -159,20 +159,22 @@ end
 
 #remove 2dsphere index, in rails c, Place.collection.indexes.map {|r| r[:name]}
 def self.remove_indexes
+	#potententially could need to check that one exists
 	self.collection.indexes.drop_one("geometry.geolocation_2dsphere")
 end
 
 #returns the places that are closest to the provided point, returns a view of places
 def self.near(point, max_meters=nil)
 	if !max_meters.nil?
-		self.collection.find(
+		result=self.collection.find(
 			"geometry.geolocation"=>{:$near=>{:$geometry=>point.to_hash, :$maxDistance=>max_meters}}
 		)
 	else
-		self.collection.find(
+		result=self.collection.find(
 			"geometry.geolocation"=>{:$near=>{:$geometry=>point.to_hash}}
 		)
 	end
+	return result.nil? ? nil : result
 end
 
 
@@ -189,7 +191,7 @@ def near(max_meters=nil)
 		)
 	end
 	#byebug
-	return self.class.to_places(result) if result
+	return result.nil? ? nil : self.class.to_places(result)
 end
 
 #return a collection of photos that have been associated with the place

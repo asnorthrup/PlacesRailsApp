@@ -38,6 +38,11 @@ def save
 		Rails.logger.debug {"saving gridfs file #{self.to_s}"}
 		description={}
 		description[:metadata]={}
+
+		if @contents.is_a?(String)
+			@contents=File.open(@contents)
+		end
+
 		#extract geolocation information from jpeg file stored in contents
 		gps=EXIFR::JPEG.new(@contents).gps
 		#gps object can be inspected for latitude and longitude properties that instantiate
@@ -52,7 +57,7 @@ def save
 
 		#call rewind between EXIFR and GridFS since they will be reading the same file
 		@contents.rewind
-
+		
 		#store the data contents in GridFS, @contents should have file
 		if @contents
 			Rails.logger.debug {"contents= #{@contents}"}
@@ -135,10 +140,10 @@ end
 #place document must be within a specified distance threshold of where the photo was taken.
 def find_nearest_place_id max_dist
 	#byebug
-	phot=self.class.find(@id)
-	phot=phot.location
-	phot=Place.near(phot,max_dist).projection(:_id=>1).first
-	return phot[:_id]
+	phot=self.class.find(@id) #returns instance of photo
+	phot_loc=phot.location #gets location from photo (point where photo was taken)
+	phot_place=Place.near(phot_loc,max_dist).projection(:_id=>1).first #find closest place to point
+	phot_place.nil? ? nil : phot_place[:_id] #return the id of the closest place to that point
 end
 
 #custom getter that finds and returns place instance that represents the stored id
@@ -166,5 +171,6 @@ def self.find_photos_for_place place_id
 	place_id=BSON::ObjectId.from_string(place_id) if place_id.is_a?(String)
 	mongo_client.database.fs.find('metadata.place'=>place_id)
 end
+
 
 end
