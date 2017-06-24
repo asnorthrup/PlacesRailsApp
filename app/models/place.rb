@@ -1,6 +1,13 @@
 require 'json'
 
 class Place
+
+include ActiveModel::Model
+#returns true if the model instance has been saved to the database. This will 
+#allow it to use the :id to navigate from the index page to the show page.
+def persisted?
+	!@id.nil?
+end
 #strings: id, formatted address
 #Points: location
 #collection of AddressComponents: address_components
